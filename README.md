@@ -2,7 +2,13 @@
 
 **A two-service Python backend exploring authentication boundaries, persistence, and cloud-native delivery.**
 
-Orbit is a hands-on backend engineering project built around a deliberate architectural constraint: **the business API does not implement authentication**. Instead, Nginx delegates authentication checks to a dedicated service before forwarding requests to the API. The project also includes PostgreSQL persistence, a Python API client, automated tests, containerized local development, and Kubernetes deployment templates.
+Two services sit behind nginx:
+
+- **`gate`** — an authentication service. It is not in the request path. nginx
+  holds each incoming request and asks `gate` whether the caller is allowed
+  through, then forwards the original request with identity headers attached.
+- **`catalog`** — an ordinary business service, deliberately trivial. It serves a
+  list of items and contains no security code at all.
 
 > **Portfolio project, not a hosted production service.** You can run the local stack without cloud credentials. Real interactive login requires configuring your own identity provider.
 
