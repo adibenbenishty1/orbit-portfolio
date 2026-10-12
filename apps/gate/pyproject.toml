@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "gate"
+version = "0.1.0"
+description = "Authentication service for orbit. Answers whether a caller may proceed; never in the request path."
+authors = ["Adi Benbenishty <adibenbenishty@gmail.com>"]
+packages = [{ include = "gate" }]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = ">=0.116,<1.0"
+uvicorn = ">=0.30,<1.0"
+pydantic-settings = "^2.0"
+click = "^8.1"
+httpx = ">=0.28,<1.0"
+pyjwt = "^2.8"
+prometheus-fastapi-instrumentator = "^8.1"
+
+[tool.poetry.scripts]
+gate = "gate.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,23 @@
+#
+# Root aggregator project for orbit.
+#
+# This project is not a package -- it exists to install every service in
+# apps/ into a single virtualenv, along with the shared test toolchain, so
+# that `poetry install` at the root is the only setup step required.
+#
+# Service dependencies are declared in each service's own pyproject.toml.
+#
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+catalog = { path = "apps/catalog", develop = true }
+gate = { path = "apps/gate", develop = true }
+sqlalchemy = "^2.0"
+psycopg = {version = "^3.2", extras = ["binary"]}
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+pyyaml = "^6.0"

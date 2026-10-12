@@ -1,0 +1,60 @@
+# ~
+#
+# Is it correct? -- catalog
+#
+# A pull request runs the suite and nothing
+# else. Path-filtered so that touching one service does not run the other's
+# pipeline, which is the discipline the filters exist for even in a
+# repository with only two.
+#
+# The filter includes the **root** lock and metadata, and this is where it
+# differs from the build workflows next door: the suite is run from the one
+# virtualenv the root lock resolves, so a change there changes what the tests
+# run against. The images copy only `apps/<service>/`, so they filter on
+# something else. Two different questions, two different filters.
+#
+# ------------------------------------------------
+
+name: Test catalog
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - .github/**
+      - apps/catalog/**
+      - pyproject.toml
+      - poetry.lock
+
+# nothing here writes anything.
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: orbit
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: orbit-dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d orbit"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Run catalog's tests
+        run: make -C apps/catalog test

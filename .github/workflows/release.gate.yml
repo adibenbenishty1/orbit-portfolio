@@ -1,0 +1,77 @@
+# ~
+#
+# Is it released? -- gate
+#
+# Release tags are
+# namespaced per service from the very first one, so `gate/v0.1.0` releases
+# this service and nothing else.
+#
+# Separate tag prefixes allow each service to release independently.
+#
+# ------------------------------------------------
+
+name: Release gate
+
+on:
+  push:
+    tags: ["gate/v*"]
+
+# a queue rather than a race: two tags pushed close together must not publish
+# over each other, and cancelling a half-finished publish is worse than
+# waiting for it. The reference declares this on releases and not on builds,
+# which is the right way round.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+# contents: write is for the release itself, which is a repository object.
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          docker: "true"
+          cache: gate
+
+      # the tag says gate/v0.1.0; the wheel says 0.1.0. If they disagree the
+      # release is a lie, so say so here rather than shipping it.
+      - name: Check the tag matches the version
+        working-directory: apps/gate
+        run: |
+          version=$(make --no-print-directory info | awk '/package/ {print $3}')
+          tagged=${GITHUB_REF_NAME#gate/v}
+          echo "pyproject: $version, tag: $tagged"
+          [ "$version" = "$tagged" ] || {
+            echo "::error::tag $GITHUB_REF_NAME does not match pyproject version $version"
+            exit 1
+          }
+
+      - name: Log in to ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # release re-tags the image it just built rather than building a second
+      # one, so the versioned tag and `latest` are the same bytes, and builds
+      # the wheel for the release page.
+      - name: Release
+        working-directory: apps/gate
+        run: make release CACHE=gha
+
+      - name: Create the GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: apps/gate/dist/*
+          generate_release_notes: true

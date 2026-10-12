@@ -1,0 +1,47 @@
+# ~
+#
+# Is it correct? -- gate
+#
+# A pull request runs the suite and nothing
+# else. Path-filtered so that touching one service does not run the other's
+# pipeline, which is the discipline the filters exist for even in a
+# repository with only two.
+#
+# The filter includes the **root** lock and metadata, and this is where it
+# differs from the build workflows next door: the suite is run from the one
+# virtualenv the root lock resolves, so a change there changes what the tests
+# run against. The images copy only `apps/<service>/`, so they filter on
+# something else. Two different questions, two different filters.
+#
+# ------------------------------------------------
+
+name: Test gate
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - .github/**
+      - apps/gate/**
+      - pyproject.toml
+      - poetry.lock
+
+# nothing here writes anything.
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # Gate tests use mocked provider responses and need no service containers.
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Run gate's tests
+        run: make -C apps/gate test

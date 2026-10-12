@@ -1,0 +1,35 @@
+# Development overrides for values.yaml.
+# Never replace these references with real secret values in Git.
+catalog:
+  # Development EKS/RDS configuration. Replace these non-secret placeholders
+  # with the development database endpoint and its RDS-managed secret ARN.
+  # The secret must contain username/password and be accessible to Catalog's
+  # Pod Identity role. This overlay still requires the AWS CSI prerequisites;
+  # use Docker Compose for the local PostgreSQL stack.
+  secrets:
+    databaseSecretObject: "arn:aws:secretsmanager:eu-north-1:000000000000:secret:rds!db-replace-with-dev-secret"
+  env:
+    ENV: dev
+    LOG_LEVEL: DEBUG
+    DB_HOST: "replace-with-dev-postgres-host.invalid"
+
+gate:
+  secrets:
+    jwtSecretObject: "orbit/dev/gate"
+    authClientSecretObject: "orbit/shared/auth-provider"
+
+  env:
+    ENV: dev
+    LOG_LEVEL: DEBUG
+    # Both environments use the same provider application/client.
+    # Replace these shared non-secret placeholders and adjust paths/claim.
+    AUTH_PROVIDER_URL: "https://replace-with-auth-provider.invalid"
+    AUTH_CLIENT_ID: "replace-with-auth-client-id"
+    AUTH_AUTHORIZE_PATH: "/authorize"
+    AUTH_TOKEN_PATH: "/oauth/token"
+    GROUPS_CLAIM: "groups"
+
+ingress:
+  # No explicit IngressClass; this chart does not install a controller.
+  className: ""
+  host: "replace-with-dev-orbit-host.invalid"

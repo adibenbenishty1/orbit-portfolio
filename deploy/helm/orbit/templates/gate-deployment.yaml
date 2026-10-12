@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "orbit.fullname" . }}-gate
+spec:
+  replicas: {{ .Values.gate.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name | quote }}
+      app.kubernetes.io/component: gate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name | quote }}
+        app.kubernetes.io/component: gate
+    spec:
+      serviceAccountName: orbit-gate
+      imagePullSecrets:
+        - name: ghcr-credentials
+      containers:
+        - name: gate
+          image: "{{ .Values.gate.image.repository }}:{{ .Values.gate.image.tag }}"
+          ports:
+            - name: http
+              containerPort: {{ .Values.gate.service.port }}
+          env:
+            - name: GATE_HOST
+              value: {{ include "orbit.fullname" . }}-gate
+            - name: GATE_PORT
+              value: {{ .Values.gate.service.port | quote }}
+            {{- range $name, $value := .Values.gate.env }}
+            - name: {{ $name }}
+              value: {{ $value | quote }}
+            {{- end }}
+
+            # NEW: sensitive values come from the Kubernetes Secret
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: orbit-gate-secrets
+                  key: JWT_SECRET
+
+            - name: AUTH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: orbit-gate-secrets
+                  key: AUTH_CLIENT_SECRET
+
+          volumeMounts:
+            - name: gate-secrets
+              mountPath: /mnt/secrets-store
+              readOnly: true
+      volumes:
+        - name: gate-secrets
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: orbit-gate-secrets

@@ -1,0 +1,43 @@
+# Common defaults; layer values-dev.yaml or values-prod.yaml for an environment.
+catalog:
+  replicaCount: 1
+  image:
+    repository: ghcr.io/adibenbenishty1/orbit/catalog
+    tag: "0.2.1"
+  service:
+    port: 5000
+  env:
+    PROMETHEUS_ENABLED: "false"
+    DB_PORT: "5432"
+    DB_NAME: "orbit"
+
+gate:
+  replicaCount: 1
+  image:
+    repository: ghcr.io/adibenbenishty1/orbit/gate
+    tag: "0.1.0"
+  service:
+    port: 5001
+  # Optional existing Kubernetes Secret containing JWT_SECRET and AUTH_CLIENT_SECRET.
+  # If using this option, remove JWT_SECRET and AUTH_CLIENT_SECRET from gate.env
+  # (set them to null in a later values overlay); explicit env overrides envFrom.
+  existingSecret: ""
+  env:
+    PROMETHEUS_ENABLED: "false"
+    AUTH_SCOPES: "openid email profile groups"
+    GROUP_PREFIX: "orbit-"
+
+nginx:
+  replicaCount: 1
+  image:
+    repository: nginx
+    tag: "1.27-alpine"
+  service:
+    port: 80
+
+ingress:
+  # Leave empty to use the cluster's default IngressClass, or set an existing class.
+  className: ""
+  annotations: {}
+  # Set the public hostname in the environment values file.
+  host: ""

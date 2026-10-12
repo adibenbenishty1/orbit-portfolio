@@ -1,0 +1,10 @@
+#
+# Repository-local poetry configuration.
+#
+# Keeps the virtualenv inside the project (orbit/.venv) rather than in the
+# user's cache directory, so it is discoverable, disposable, and already
+# covered by .gitignore. Scoped to this repository on purpose.
+#
+
+[virtualenvs]
+in-project = true

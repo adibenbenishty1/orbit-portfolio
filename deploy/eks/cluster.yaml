@@ -1,0 +1,24 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: orbit
+  region: eu-north-1
+
+autoModeConfig:
+  enabled: false
+
+vpc:
+  nat:
+    gateway: Disable
+
+managedNodeGroups:
+  - name: orbit-workers
+    instanceType: m7i-flex.large
+    desiredCapacity: 1
+    minSize: 1
+    maxSize: 1
+
+addons:
+  - name: eks-pod-identity-agent
+  - name: aws-secrets-store-csi-driver-provider

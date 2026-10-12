@@ -1,0 +1,63 @@
+# ~
+#
+# Is it deployable? -- gate
+#
+# A push to the default branch builds the
+# image and pushes the moving tags. It does **not** re-run the suite -- the
+# pull-request gate next door already answered that question, and the whole
+# point of the three-workflow shape is that each one answers a different one.
+#
+# Deployment is configured separately; this workflow only publishes images.
+#
+# The filter differs from `pr.gate.yml` on purpose. The image copies only
+# `apps/gate/` even though the build context is the repository root, so a
+# refresh of the root lock correctly rebuilds nothing -- checked rather than
+# assumed on 2026-09-03.
+#
+# ------------------------------------------------
+
+name: Build gate
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - .github/**
+      - apps/gate/**
+      - .dockerignore
+
+# packages: write is what publishes to ghcr, and it is the only write this
+# section needs anywhere. no repository secret, no cloud credential, no
+# secrets manager -- which is the entire `auth` composite action of the
+# reference collapsing to one permission and one built-in token.
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          docker: "true"
+          cache: gate
+
+      - name: Log in to ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # the vocabulary, not a second build recipe. push depends on image, so
+      # this one line builds and publishes -- and CACHE=gha is the only thing
+      # the runner adds over a laptop build.
+      - name: Build and push
+        working-directory: apps/gate
+        run: make push CACHE=gha

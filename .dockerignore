@@ -1,0 +1,40 @@
+# ~
+#
+# Build context exclusions for orbit
+#
+# Both images build with the repository root as context, so everything here
+# would otherwise be sent to the daemon and be available to a COPY. The first
+# two blocks are about size and cache churn; the third is about secrets.
+#
+# ------------------------------------------------
+
+
+# version control and tooling
+.git
+.gitignore
+.claude
+.github
+
+# environments and caches -- .venv in particular is hundreds of megabytes of
+# host-built wheels that would be wrong inside the image even if copied
+.venv
+__pycache__
+*.py[cod]
+.pytest_cache
+.ruff_cache
+.mypy_cache
+
+# tests and documentation. neither is installed into the image, and both
+# change often enough to invalidate the context for no gain
+apps/*/tests
+docs
+*.md
+
+# secrets. apps/gate/.env holds the auth0 client secret and the tenant's
+# details. it is gitignored, so it is not in a clone -- but it *is* in a
+# working tree, and a build context is not a clone. the container receives
+# these values at run time through compose's env_file, never baked into a
+# layer where anyone with the image can read them back.
+.env
+*.env
+env/

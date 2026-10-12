@@ -1,0 +1,86 @@
+# ~
+#
+# Composite action: the toolchain every orbit workflow needs
+#
+# Install Python dependencies and optionally configure Docker builds.
+# Registry authentication uses the workflow's GitHub token.
+#
+# ------------------------------------------------
+
+name: Setup
+description: Install the toolchain and dependencies for building and testing orbit
+
+inputs:
+  python-version:
+    description: Python version to install
+    required: false
+    default: "3.13"
+  docker:
+    description: Whether to configure docker buildx for image builds
+    required: false
+    default: "false"
+  cache:
+    description: Scope for the buildx cache -- use the service name, since the two images cache separately
+    required: false
+    default: build
+
+runs:
+  using: composite
+  steps:
+
+    - name: Install python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    # pinned, and pinned to the same version the Dockerfiles pin. An
+    # unpinned `pip install poetry` fetches 2.x, which dropped the
+    # `--no-update` flag the root `lock` target passes and writes a newer lock
+    # format than the committed one -- so CI would resolve dependencies
+    # differently from the images it is about to build.
+    - name: Install poetry
+      shell: bash
+      run: pip install "poetry==1.8.4"
+
+    # git sets every file's mtime to checkout time in no particular order, and
+    # the root Makefile tracks lock staleness by mtime on purpose (poetry only
+    # hashes the root pyproject, so `poetry check --lock` cannot see a service
+    # dependency change). On a runner that race can decide the locks are stale
+    # and re-resolve them mid-build, which would install something other than
+    # what was committed. Proven locally on 2026-09-03: with pyproject newer,
+    # `make install` runs `poetry lock` first.
+    - name: Pin the lock files as fresh
+      shell: bash
+      run: touch poetry.lock apps/*/poetry.lock
+
+    # keyed on the root lock, because that is the file the one virtualenv is
+    # resolved from. the fallback keys go from exact, to this repository, to
+    # any poetry cache on this runner image -- so a lock change gets a warm
+    # cache to build on instead of a cold one.
+    - name: Restore the poetry cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pypoetry
+        key: ${{ runner.os }}-poetry-${{ github.repository }}-${{ hashFiles('poetry.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-poetry-${{ github.repository }}-
+          ${{ runner.os }}-poetry-
+
+    # `make install` rather than `poetry install`, because the root project is
+    # an aggregator: it also redoes the editable installs that give each
+    # service its console script. one entry point for laptop and runner alike.
+    - name: Install dependencies
+      shell: bash
+      run: make install
+
+    - name: Configure docker buildx
+      if: inputs.docker == 'true'
+      uses: docker/setup-buildx-action@v3
+
+    # buildx's gha cache backend reads two variables that are not in the
+    # workflow environment by default. without them `--cache-to type=gha`
+    # fails, and this is the one place §7 needs an action that is neither
+    # GitHub's nor Docker's.
+    - name: Export the actions cache runtime
+      if: inputs.docker == 'true'
+      uses: crazy-max/ghaction-github-runtime@v3

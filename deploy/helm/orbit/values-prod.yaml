@@ -1,0 +1,35 @@
+# Production overrides for values.yaml.
+# Supply your database endpoint and managed secret ARN when deploying.
+# These placeholders keep the overlay renderable without binding it to a DB.
+# Never replace these references with real secret values in Git.
+catalog:
+  secrets:
+    databaseSecretObject: "arn:aws:secretsmanager:eu-north-1:000000000000:secret:rds!db-replace-with-prod-secret"
+  env:
+    ENV: prod
+    LOG_LEVEL: INFO
+    DB_HOST: "replace-with-prod-postgres-host.invalid"
+
+
+
+gate:
+  secrets:
+    jwtSecretObject: "orbit/prod/gate"
+    authClientSecretObject: "orbit/shared/auth-provider"
+  env:
+    ENV: prod
+    LOG_LEVEL: INFO
+    # Both environments use the same provider application/client.
+    # Replace these shared non-secret placeholders and adjust paths/claim.
+    AUTH_PROVIDER_URL: "https://replace-with-auth-provider.invalid"
+    AUTH_CLIENT_ID: "replace-with-auth-client-id"
+    AUTH_AUTHORIZE_PATH: "/authorize"
+    AUTH_TOKEN_PATH: "/oauth/token"
+    GROUPS_CLAIM: "groups"
+
+ingress:
+  className: "alb"
+  annotations:
+    alb.ingress.kubernetes.io/scheme: "internet-facing"
+    alb.ingress.kubernetes.io/target-type: "ip"
+  host: ""

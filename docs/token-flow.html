@@ -1,0 +1,811 @@
+<title>Two Tokens, One Flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap">
+
+<style>
+  :root {
+    --ground:      #E9EDEC;
+    --surface:     #F7F9F8;
+    --surface-2:   #EDF1F0;
+    --ink:         #0D1B1E;
+    --ink-soft:    #33474A;
+    --muted:       #627578;
+    --line:        #C6D0D0;
+    --line-soft:   #DCE4E3;
+    --gate:        #0B6E6D;
+    --gate-wash:   rgba(11,110,109,0.09);
+    --provider:    #A85C08;
+    --provider-wash: rgba(168,92,8,0.09);
+
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    --body: "Newsreader", Georgia, "Times New Roman", serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #0B1416;
+      --surface:     #111C1F;
+      --surface-2:   #162326;
+      --ink:         #E3EBEA;
+      --ink-soft:    #B4C4C4;
+      --muted:       #82989B;
+      --line:        #2B3A3D;
+      --line-soft:   #1E2C2F;
+      --gate:        #3ECBC5;
+      --gate-wash:   rgba(62,203,197,0.12);
+      --provider:    #E5A24A;
+      --provider-wash: rgba(229,162,74,0.12);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #0B1416;
+    --surface:     #111C1F;
+    --surface-2:   #162326;
+    --ink:         #E3EBEA;
+    --ink-soft:    #B4C4C4;
+    --muted:       #82989B;
+    --line:        #2B3A3D;
+    --line-soft:   #1E2C2F;
+    --gate:        #3ECBC5;
+    --gate-wash:   rgba(62,203,197,0.12);
+    --provider:    #E5A24A;
+    --provider-wash: rgba(229,162,74,0.12);
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 17.5px;
+    line-height: 1.62;
+    margin: 0;
+    padding: 0 20px 96px;
+  }
+
+  .page {
+    display: grid;
+    grid-template-columns:
+      [full-start] 1fr
+      [text-start] min(66ch, 100%) [text-end]
+      1fr [full-end];
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  .page > * { grid-column: text; }
+  .page > .wide { grid-column: full; }
+
+  /* ---- masthead ---- */
+  header { padding: 72px 0 8px; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: clamp(30px, 5.4vw, 44px);
+    line-height: 1.08;
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+    margin: 0 0 20px;
+  }
+  .standfirst {
+    font-size: 20px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    margin: 0 0 10px;
+    text-wrap: pretty;
+  }
+  .rule {
+    height: 1px;
+    background: var(--line);
+    border: 0;
+    margin: 40px 0;
+  }
+
+  h2 {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--ink);
+    margin: 56px 0 6px;
+  }
+  h2 .num {
+    color: var(--muted);
+    margin-right: 12px;
+    font-weight: 500;
+  }
+  .dek {
+    color: var(--muted);
+    font-size: 16.5px;
+    font-style: italic;
+    margin: 0 0 26px;
+  }
+  h3.sub {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    margin: 46px 0 4px;
+  }
+  p.after-table { margin-top: 24px; }
+  p { margin: 0 0 18px; text-wrap: pretty; }
+  code {
+    font-family: var(--mono);
+    font-size: 0.86em;
+    background: var(--surface-2);
+    border: 1px solid var(--line-soft);
+    padding: 0.08em 0.34em;
+    color: var(--ink);
+  }
+  strong { font-weight: 600; }
+  .t-gate { color: var(--gate); font-weight: 600; }
+  .t-prov { color: var(--provider); font-weight: 600; }
+
+  /* ---- token cards ---- */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 18px;
+    margin: 34px 0 8px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 22px 22px 18px;
+  }
+  .card-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 4px;
+  }
+  .chip {
+    width: 11px;
+    height: 11px;
+    flex: 0 0 auto;
+  }
+  .chip-prov { background: var(--provider); }
+  .chip-gate { background: var(--gate); }
+  .card h3 {
+    font-family: var(--mono);
+    font-size: 13.5px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: 0.01em;
+  }
+  .card .who {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 16px 20px;
+  }
+  .card dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 7px 16px;
+    margin: 0;
+    font-size: 14.5px;
+  }
+  .card dt {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-top: 3px;
+  }
+  .card dd {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--ink-soft);
+  }
+
+  /* ---- figures ---- */
+  figure {
+    margin: 30px 0 34px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 26px 18px 4px;
+  }
+  .scroll { overflow-x: auto; }
+  figure svg {
+    display: block;
+    width: 100%;
+    min-width: 620px;
+    height: auto;
+  }
+  figcaption {
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--muted);
+    border-top: 1px solid var(--line-soft);
+    margin-top: 18px;
+    padding: 14px 8px 18px;
+    text-wrap: pretty;
+  }
+  figcaption b { color: var(--ink-soft); font-weight: 600; }
+
+  /* ---- svg classes ---- */
+  .lane-box   { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; }
+  .lane-name  { font-family: var(--mono); font-size: 12.5px; font-weight: 600; fill: var(--ink); }
+  .lane-sub   { font-family: var(--mono); font-size: 10px; fill: var(--muted); letter-spacing: 0.06em; }
+  .lifeline   { stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 5; }
+  .flow       { stroke: var(--muted); stroke-width: 1.4; fill: none; }
+  .flow-a     { stroke: var(--provider); stroke-width: 2.4; fill: none; }
+  .flow-b     { stroke: var(--gate); stroke-width: 2.4; fill: none; }
+  .head       { fill: var(--muted); }
+  .head-a     { fill: var(--provider); }
+  .head-b     { fill: var(--gate); }
+  .lbl        { font-family: var(--mono); font-size: 12px; fill: var(--muted); }
+  .lbl-sm     { font-family: var(--mono); font-size: 11px; fill: var(--muted); }
+  .lbl-a      { font-family: var(--mono); font-size: 12px; font-weight: 600; fill: var(--provider); }
+  .lbl-b      { font-family: var(--mono); font-size: 12px; font-weight: 600; fill: var(--gate); }
+  .lblbg      { fill: var(--surface); }
+  .step-ring  { fill: var(--surface); stroke: var(--line); stroke-width: 1; }
+  .step-num   { font-family: var(--mono); font-size: 10px; font-weight: 600; fill: var(--muted); }
+  .note-a     { fill: var(--provider-wash); stroke: var(--provider); stroke-width: 1; }
+  .note-b     { fill: var(--gate-wash); stroke: var(--gate); stroke-width: 1; }
+  .note-txt   { font-family: var(--mono); font-size: 11.5px; fill: var(--ink); }
+  .note-txt-a { font-family: var(--mono); font-size: 11.5px; font-weight: 600; fill: var(--provider); }
+  .absent     { fill: none; stroke: var(--provider); stroke-width: 1; stroke-dasharray: 5 5; opacity: 0.55; }
+  .absent-txt { font-family: var(--mono); font-size: 11.5px; fill: var(--provider); opacity: 0.85; }
+  .panel      { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; }
+  .panel-a    { fill: var(--provider-wash); stroke: var(--provider); stroke-width: 1; }
+  .eyeb       { font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: 0.14em; fill: var(--muted); }
+  .row        { font-family: var(--mono); font-size: 11.5px; fill: var(--ink-soft); }
+  .row-a      { font-family: var(--mono); font-size: 11.5px; font-weight: 600; fill: var(--provider); }
+  .row-dim    { font-family: var(--mono); font-size: 11.5px; fill: var(--muted); }
+
+  /* ---- extraction table ---- */
+  .xtab { width: 100%; border-collapse: collapse; margin: 4px 0 6px; min-width: 520px; }
+  .xtab th {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 0 16px 11px 0;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  .xtab td {
+    padding: 11px 16px 11px 0;
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: top;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.4;
+    color: var(--ink-soft);
+  }
+  .xtab tr:last-child td { border-bottom: 0; }
+  .xtab .op {
+    width: 1%;
+    padding-right: 16px;
+    color: var(--muted);
+    text-align: center;
+  }
+  .xtab .keep { color: var(--gate); font-weight: 600; }
+  .xtab .gone { color: var(--muted); }
+
+  /* ---- consequences ---- */
+  .conseq { margin: 30px 0 0; padding: 0; list-style: none; }
+  .conseq li {
+    border-top: 1px solid var(--line-soft);
+    padding: 16px 0 14px;
+    display: grid;
+    grid-template-columns: 132px 1fr;
+    gap: 20px;
+    align-items: baseline;
+  }
+  .conseq li:last-child { border-bottom: 1px solid var(--line-soft); }
+  .conseq .k {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .conseq .v { font-size: 16.5px; line-height: 1.55; }
+  @media (max-width: 560px) {
+    .conseq li { grid-template-columns: 1fr; gap: 5px; }
+  }
+
+  .statusnote {
+    margin-top: 46px;
+    border-left: 2px solid var(--line);
+    padding: 4px 0 4px 20px;
+    font-size: 15.5px;
+    color: var(--muted);
+  }
+  .statusnote b { color: var(--ink-soft); font-weight: 600; }
+</style>
+
+<div class="page">
+
+  <header>
+    <p class="eyebrow">orbit · gate · §2</p>
+    <h1>Two Tokens, One Flow</h1>
+    <p class="standfirst">Auth0 signs one. <code>gate</code> signs the other. They share no key, no algorithm and no trust — only a single hop inside <code>/auth/callback</code>, where one is read and the other is written.</p>
+  </header>
+
+  <hr class="rule">
+
+  <div class="cards wide">
+    <div class="card">
+      <div class="card-head">
+        <span class="chip chip-prov"></span>
+        <h3>id_token</h3>
+      </div>
+      <p class="who">Auth0 issues it</p>
+      <dl>
+        <dt>Alg</dt><dd>RS256 · asymmetric</dd>
+        <dt>Signed</dt><dd>Auth0's private key<br>(you never hold it)</dd>
+        <dt>Verified</dt><dd>Auth0's public key,<br>fetched from their JWKS</dd>
+        <dt>Says</dt><dd>this person authenticated</dd>
+        <dt>Lives</dt><dd>one server-to-server hop,<br>inside the callback</dd>
+      </dl>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <span class="chip chip-gate"></span>
+        <h3>gate token</h3>
+      </div>
+      <p class="who">gate issues it</p>
+      <dl>
+        <dt>Alg</dt><dd>HS256 · symmetric</dd>
+        <dt>Signed</dt><dd>JWT_SECRET<br>(only gate holds it)</dd>
+        <dt>Verified</dt><dd>the same JWT_SECRET,<br>alg pinned at decode</dd>
+        <dt>Says</dt><dd>gate authorises this caller</dd>
+        <dt>Lives</dt><dd>everywhere else · 24h</dd>
+      </dl>
+    </div>
+  </div>
+
+  <h2><span class="num">01</span>Where each token comes from</h2>
+  <p class="dek">The three-legged login — the only place both tokens are in the same building.</p>
+
+  <p>The browser never talks to <code>gate</code> and Auth0 in one breath; it is bounced between them by redirects. The exchange in steps 7–8 is the exception: that one is <code>gate</code> calling Auth0 directly, server to server, and it is the only moment an Auth0 token exists anywhere in orbit.</p>
+
+  <figure class="wide">
+    <div class="scroll">
+      <svg viewBox="0 0 880 620" role="img" aria-label="Sequence diagram of the three-legged login. The client is redirected from gate to Auth0, signs in, and returns to gate's callback with a code. Gate exchanges that code server-to-server for an Auth0 id_token signed with RS256, reads its claims, and mints its own HS256 token signed with JWT_SECRET, which it hands to the client.">
+        <defs>
+          <marker id="f1-h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <polygon class="head" points="0,1 10,5 0,9"></polygon>
+          </marker>
+          <marker id="f1-ha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <polygon class="head-a" points="0,1 10,5 0,9"></polygon>
+          </marker>
+          <marker id="f1-hb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <polygon class="head-b" points="0,1 10,5 0,9"></polygon>
+          </marker>
+        </defs>
+
+        <!-- lane headers -->
+        <rect class="lane-box" x="45"  y="18" width="150" height="38"></rect>
+        <text class="lane-name" x="120" y="36" text-anchor="middle">client</text>
+        <text class="lane-sub"  x="120" y="49" text-anchor="middle">BROWSER OR CLI</text>
+
+        <rect class="lane-box" x="355" y="18" width="150" height="38"></rect>
+        <text class="lane-name" x="430" y="36" text-anchor="middle">gate</text>
+        <text class="lane-sub"  x="430" y="49" text-anchor="middle">LOCALHOST:5001</text>
+
+        <rect class="lane-box" x="675" y="18" width="150" height="38"></rect>
+        <text class="lane-name" x="750" y="36" text-anchor="middle">Auth0</text>
+        <text class="lane-sub"  x="750" y="49" text-anchor="middle">TENANT</text>
+
+        <!-- lifelines -->
+        <line class="lifeline" x1="120" y1="56" x2="120" y2="592"></line>
+        <line class="lifeline" x1="430" y1="56" x2="430" y2="592"></line>
+        <line class="lifeline" x1="750" y1="56" x2="750" y2="592"></line>
+
+        <!-- 1 -->
+        <circle class="step-ring" cx="22" cy="104" r="9.5"></circle>
+        <text class="step-num" x="22" y="107.5" text-anchor="middle">1</text>
+        <line class="flow" x1="120" y1="104" x2="430" y2="104" marker-end="url(#f1-h)"></line>
+        <text class="lbl" x="275" y="95" text-anchor="middle">GET /auth/login?rd=/items</text>
+
+        <!-- 2 -->
+        <circle class="step-ring" cx="22" cy="150" r="9.5"></circle>
+        <text class="step-num" x="22" y="153.5" text-anchor="middle">2</text>
+        <line class="flow" x1="430" y1="150" x2="120" y2="150" marker-end="url(#f1-h)"></line>
+        <text class="lbl" x="275" y="141" text-anchor="middle">302 · state carries rd</text>
+
+        <!-- 3 -->
+        <circle class="step-ring" cx="22" cy="196" r="9.5"></circle>
+        <text class="step-num" x="22" y="199.5" text-anchor="middle">3</text>
+        <line class="flow" x1="120" y1="196" x2="750" y2="196" marker-end="url(#f1-h)"></line>
+        <rect class="lblbg" x="357" y="174" width="156" height="16"></rect>
+        <text class="lbl" x="435" y="187" text-anchor="middle">follows the redirect</text>
+
+        <!-- 4 -->
+        <circle class="step-ring" cx="22" cy="243" r="9.5"></circle>
+        <text class="step-num" x="22" y="246.5" text-anchor="middle">4</text>
+        <rect class="note-a" x="665" y="224" width="170" height="38"></rect>
+        <text class="note-txt-a" x="750" y="247" text-anchor="middle">person signs in</text>
+
+        <!-- 5 -->
+        <circle class="step-ring" cx="22" cy="306" r="9.5"></circle>
+        <text class="step-num" x="22" y="309.5" text-anchor="middle">5</text>
+        <line class="flow" x1="750" y1="306" x2="120" y2="306" marker-end="url(#f1-h)"></line>
+        <rect class="lblbg" x="364" y="284" width="142" height="16"></rect>
+        <text class="lbl" x="435" y="297" text-anchor="middle">302 · code + state</text>
+
+        <!-- 6 -->
+        <circle class="step-ring" cx="22" cy="348" r="9.5"></circle>
+        <text class="step-num" x="22" y="351.5" text-anchor="middle">6</text>
+        <line class="flow" x1="120" y1="348" x2="430" y2="348" marker-end="url(#f1-h)"></line>
+        <text class="lbl" x="275" y="339" text-anchor="middle">GET /auth/callback?code=…</text>
+
+        <!-- 7 -->
+        <circle class="step-ring" cx="22" cy="392" r="9.5"></circle>
+        <text class="step-num" x="22" y="395.5" text-anchor="middle">7</text>
+        <line class="flow" x1="430" y1="392" x2="750" y2="392" marker-end="url(#f1-h)"></line>
+        <text class="lbl" x="590" y="383" text-anchor="middle">POST /oauth/token · code + secret</text>
+
+        <!-- 8 -->
+        <circle class="step-ring" cx="22" cy="432" r="9.5"></circle>
+        <text class="step-num" x="22" y="435.5" text-anchor="middle">8</text>
+        <line class="flow-a" x1="750" y1="432" x2="430" y2="432" marker-end="url(#f1-ha)"></line>
+        <text class="lbl-a" x="590" y="423" text-anchor="middle">id_token · RS256 · Auth0's key</text>
+
+        <!-- 9 -->
+        <circle class="step-ring" cx="22" cy="485" r="9.5"></circle>
+        <text class="step-num" x="22" y="488.5" text-anchor="middle">9</text>
+        <rect class="note-b" x="326" y="462" width="208" height="46"></rect>
+        <text class="note-txt" x="430" y="480" text-anchor="middle">read claims → mint()</text>
+        <text class="note-txt" x="430" y="497" text-anchor="middle">HS256 · JWT_SECRET</text>
+
+        <!-- 10 -->
+        <circle class="step-ring" cx="22" cy="548" r="9.5"></circle>
+        <text class="step-num" x="22" y="551.5" text-anchor="middle">10</text>
+        <line class="flow-b" x1="430" y1="548" x2="120" y2="548" marker-end="url(#f1-hb)"></line>
+        <text class="lbl-b" x="275" y="539" text-anchor="middle">gate token</text>
+
+        <text class="lbl-sm" x="120" y="580" text-anchor="middle">keeps this one</text>
+      </svg>
+    </div>
+    <figcaption><b>The amber arrow appears exactly once.</b> Auth0's token crosses one hop and is discarded; step 9 is the translation, where its claims become inputs to <code>mint()</code> and a new token is signed with a different key by a different algorithm. Every step here runs today, against a real tenant.</figcaption>
+  </figure>
+
+  <h2><span class="num">02</span>Inside the exchange</h2>
+  <p class="dek">One hop, two mints — the moment both tokens exist at once.</p>
+
+  <p>This is steps 7 through 9 of the diagram above, slowed down. It is the only
+  back-channel call in the whole flow: no browser involved, gate calling Auth0
+  directly, authenticated with the client secret.</p>
+
+  <p><strong>Two mints happen here, in this order.</strong></p>
+
+  <p><span class="t-prov">Auth0 mints the <code>id_token</code></span> — at the
+  moment it accepts the code, signed RS256 with a private key you never hold. It
+  exists to answer one question: <em>did this person authenticate?</em></p>
+
+  <p><span class="t-gate">Gate mints its own token</span> — immediately after,
+  from claims it read out of Auth0's. Signed HS256 with <code>JWT_SECRET</code>.
+  It answers a different question: <em>may this caller proceed?</em></p>
+
+  <p>Nothing is re-signed and nothing is converted. Auth0's token is read once,
+  its useful fields copied out, and then dropped — never stored, never forwarded
+  downstream, never shown to the caller.</p>
+
+  <figure class="wide">
+    <div class="scroll">
+      <svg viewBox="0 0 880 470" role="img" aria-label="Diagram of the token exchange. Gate posts the authorisation code, a redirect URI identical to the login leg, and its client credentials as HTTP Basic auth to Auth0's token endpoint. Auth0 returns JSON containing an id_token, which is the only field gate reads; the access token, token type and expiry are unused and no refresh token is returned.">
+        <defs>
+          <marker id="f4-h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <polygon class="head" points="0,1 10,5 0,9"></polygon>
+          </marker>
+          <marker id="f4-ha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <polygon class="head-a" points="0,1 10,5 0,9"></polygon>
+          </marker>
+        </defs>
+
+        <rect class="lane-box" x="55" y="20" width="170" height="38"></rect>
+        <text class="lane-name" x="140" y="38" text-anchor="middle">gate</text>
+        <text class="lane-sub"  x="140" y="51" text-anchor="middle">/AUTH/CALLBACK</text>
+
+        <rect class="lane-box" x="655" y="20" width="170" height="38"></rect>
+        <text class="lane-name" x="740" y="38" text-anchor="middle">Auth0</text>
+        <text class="lane-sub"  x="740" y="51" text-anchor="middle">/OAUTH/TOKEN</text>
+
+        <line class="lifeline" x1="140" y1="58" x2="140" y2="445"></line>
+        <line class="lifeline" x1="740" y1="58" x2="740" y2="445"></line>
+
+        <line class="flow" x1="140" y1="92" x2="740" y2="92" marker-end="url(#f4-h)"></line>
+        <rect class="lblbg" x="368" y="70" width="144" height="16"></rect>
+        <text class="lbl" x="440" y="83" text-anchor="middle">POST · server to server</text>
+
+        <rect class="panel" x="200" y="110" width="480" height="108"></rect>
+        <text class="eyeb" x="216" y="130">SENT</text>
+        <text class="row"  x="216" y="154">grant_type=authorization_code</text>
+        <text class="row"  x="216" y="172">code — the one Auth0 put on the query string</text>
+        <text class="row"  x="216" y="190">redirect_uri — byte-identical to login's, or 403</text>
+        <text class="row-dim" x="216" y="208">client_id + secret — HTTP Basic, not in the body</text>
+
+        <line class="flow-a" x1="740" y1="252" x2="140" y2="252" marker-end="url(#f4-ha)"></line>
+        <rect class="lblbg" x="376" y="230" width="128" height="16"></rect>
+        <text class="lbl-a" x="440" y="243" text-anchor="middle">200 · json body</text>
+
+        <rect class="panel-a" x="200" y="270" width="480" height="126"></rect>
+        <text class="eyeb" x="216" y="290">RETURNED</text>
+        <text class="row-a"   x="216" y="314">id_token — the only field gate reads</text>
+        <text class="row-dim" x="216" y="336">access_token — for calling Auth0's api; unused</text>
+        <text class="row-dim" x="216" y="356">token_type · expires_in — unused</text>
+        <text class="row-dim" x="216" y="376">refresh_token — absent, no offline_access scope</text>
+
+        <text class="lbl-sm" x="440" y="428" text-anchor="middle">nothing here is stored · the id_token is read once and discarded</text>
+      </svg>
+    </div>
+    <figcaption><b>Four fields out, one field in.</b> The <code>redirect_uri</code> is sent again even though Auth0 already has it — it must match the login leg exactly, which is why both legs have to build that string from one place rather than each spelling it out.</figcaption>
+  </figure>
+
+  <h3 class="sub">What the minting extracts</h3>
+  <p class="dek">Every field that crosses from one token to the other, and every one that doesn't.</p>
+
+  <div class="scroll">
+    <table class="xtab">
+      <thead>
+        <tr>
+          <th>Auth0's id_token says</th>
+          <th class="op"></th>
+          <th>gate's token carries</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>sub</td><td class="op keep">→</td><td>sub — verbatim, e.g. <span class="gone">auth0|abc123</span></td></tr>
+        <tr><td>name</td><td class="op keep">→</td><td>name — or sub, when absent</td></tr>
+        <tr><td>email</td><td class="op keep">→</td><td>email — or null for a non-human caller</td></tr>
+        <tr><td>groups — raw, <span class="gone">orbit-catalog-read</span></td><td class="op keep">→</td><td>groups — normalised, <span class="keep">catalog:read</span></td></tr>
+        <tr><td>iss · aud · nonce · at_hash</td><td class="op gone">✕</td><td class="gone">dropped — provider bookkeeping</td></tr>
+        <tr><td>iat · exp</td><td class="op gone">✕</td><td class="gone">dropped, then stamped fresh by gate</td></tr>
+        <tr><td>its RS256 signature</td><td class="op gone">✕</td><td class="gone">replaced by an HS256 one</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="after-table">Four fields cross, and one of them is rewritten on the
+  way. Everything else is left behind — including the timestamps, because gate's
+  token has its own lifetime (<code>JWT_TTL_HOURS</code>, 24 by default) that has
+  nothing to do with how long Auth0's assertion was good for.</p>
+
+  <hr class="rule">
+
+  <h2><span class="num">03</span>Where the groups come from</h2>
+  <p class="dek">A directory role becomes an HTTP header — and changes vocabulary exactly once on the way.</p>
+
+  <p>The four crossing claims in the table above are not equals. Three of them say <em>who</em>, and Auth0 knows them because somebody typed a password. The fourth says <em>what they may do</em> — and Auth0 does not know that by default. Nothing in the act of logging in tells a provider that this person may read <code>catalog</code>. The fact has to be put into the tenant deliberately and then carried out of it deliberately, which is why <code>groups</code> costs four pieces of configuration while <code>email</code> costs none.</p>
+
+  <p>It travels <em>inside the token</em> for the reason the next section is about: <code>/auth/check</code> runs on every single request. Looking groups up from Auth0 per request would put a network hop, someone else's outage and someone else's rate limit into the hot path of the entire system. So the facts an authorisation decision will need are frozen into the credential at login, and carried by it from then on.</p>
+
+  <figure class="wide">
+    <div class="scroll">
+      <svg viewBox="0 0 880 470" role="img" aria-label="Diagram of the group chain in six steps. An Auth0 role named orbit-catalog-read is assigned to the person; a Post-Login Action copies it into a namespaced claim; the id_token carries it to the callback; normalise strips the prefix and produces catalog:read; mint signs it into gate's own token; and the check endpoint emits it as the X-Groups header.">
+        <defs>
+          <marker id="f4-ha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <polygon class="head-a" points="0,1 10,5 0,9"></polygon>
+          </marker>
+          <marker id="f4-hb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <polygon class="head-b" points="0,1 10,5 0,9"></polygon>
+          </marker>
+        </defs>
+
+        <text class="eyeb" x="506" y="14">VOCABULARY AT THIS POINT</text>
+
+        <circle class="step-ring" cx="22" cy="44" r="9.5"></circle>
+        <text class="step-num" x="22" y="47.5" text-anchor="middle">1</text>
+        <rect class="note-a" x="120" y="18" width="360" height="52"></rect>
+        <text class="lane-name" x="300" y="40" text-anchor="middle">Auth0 · User Management</text>
+        <text class="lane-sub"  x="300" y="57" text-anchor="middle">A ROLE, ASSIGNED TO THE PERSON</text>
+        <text class="row-a" x="506" y="49">orbit-catalog-read</text>
+        <line class="flow-a" x1="300" y1="70" x2="300" y2="92" marker-end="url(#f4-ha)"></line>
+
+        <circle class="step-ring" cx="22" cy="118" r="9.5"></circle>
+        <text class="step-num" x="22" y="121.5" text-anchor="middle">2</text>
+        <rect class="note-a" x="120" y="92" width="360" height="52"></rect>
+        <text class="lane-name" x="300" y="114" text-anchor="middle">Post-Login Action</text>
+        <text class="lane-sub"  x="300" y="131" text-anchor="middle">RUNS INSIDE EVERY LOGIN</text>
+        <text class="row-a" x="506" y="123">"https://orbit.test/groups"</text>
+        <line class="flow-a" x1="300" y1="144" x2="300" y2="166" marker-end="url(#f4-ha)"></line>
+
+        <circle class="step-ring" cx="22" cy="192" r="9.5"></circle>
+        <text class="step-num" x="22" y="195.5" text-anchor="middle">3</text>
+        <rect class="note-a" x="120" y="166" width="360" height="52"></rect>
+        <text class="lane-name" x="300" y="188" text-anchor="middle">id_token</text>
+        <text class="lane-sub"  x="300" y="205" text-anchor="middle">READ ONCE, INSIDE /auth/callback</text>
+        <text class="row-a" x="506" y="197">["orbit-catalog-read"]</text>
+        <line class="flow-a" x1="300" y1="218" x2="300" y2="240" marker-end="url(#f4-ha)"></line>
+
+        <circle class="step-ring" cx="22" cy="266" r="9.5"></circle>
+        <text class="step-num" x="22" y="269.5" text-anchor="middle">4</text>
+        <rect class="note-b" x="120" y="240" width="360" height="52"></rect>
+        <text class="lane-name" x="300" y="262" text-anchor="middle">normalise()</text>
+        <text class="lane-sub"  x="300" y="279" text-anchor="middle">PREFIX STRIPPED · ROLE RECOGNISED</text>
+        <text class="row" x="506" y="271">catalog:read</text>
+        <line class="flow-b" x1="300" y1="292" x2="300" y2="314" marker-end="url(#f4-hb)"></line>
+
+        <circle class="step-ring" cx="22" cy="340" r="9.5"></circle>
+        <text class="step-num" x="22" y="343.5" text-anchor="middle">5</text>
+        <rect class="note-b" x="120" y="314" width="360" height="52"></rect>
+        <text class="lane-name" x="300" y="336" text-anchor="middle">mint()</text>
+        <text class="lane-sub"  x="300" y="353" text-anchor="middle">GATE SIGNS ITS OWN TOKEN</text>
+        <text class="row" x="506" y="345">groups: ["catalog:read"]</text>
+        <line class="flow-b" x1="300" y1="366" x2="300" y2="388" marker-end="url(#f4-hb)"></line>
+
+        <circle class="step-ring" cx="22" cy="414" r="9.5"></circle>
+        <text class="step-num" x="22" y="417.5" text-anchor="middle">6</text>
+        <rect class="note-b" x="120" y="388" width="360" height="52"></rect>
+        <text class="lane-name" x="300" y="410" text-anchor="middle">/auth/check</text>
+        <text class="lane-sub"  x="300" y="427" text-anchor="middle">ON EVERY REQUEST, FOREVER AFTER</text>
+        <text class="row" x="506" y="419">X-Groups: catalog:read</text>
+      </svg>
+    </div>
+    <figcaption><b>One fact, two spellings, one translation.</b> Steps 1–3 are the directory's vocabulary and Auth0 owns it. Steps 4–6 are gate's, and nothing upstream has a say in it. <code>normalise()</code> is the only place in the entire system that knows both.</figcaption>
+  </figure>
+
+  <p>Step 4 is the one that is easy to mistake for plumbing. <code>orbit-catalog-read</code> is a name in someone else's directory, chosen to be unique across an organisation; <code>catalog:read</code> is a <em>service</em> and a <em>role</em>, which is the shape §6's policy layer will compare against. The <code>orbit-</code> prefix is an allowlist rather than decoration — a group without it belongs to some other part of the directory and is dropped, so a person's unrelated memberships can never widen what they may do here. A prefixed group whose tail is not <code>read</code>, <code>write</code> or <code>admin</code> is dropped too, which keeps the vocabulary total: every entry the policy layer ever sees is well formed.</p>
+
+  <h3 class="sub">What running the token through /check proved</h3>
+
+  <p>Both halves had been proved separately and neither proof said they agree. The callback tests assert that a mint happens; the check tests assert that a hand-made token is accepted. Both can pass while the two ends disagree about what a group is called — and that disagreement would surface not as a failure but as a caller who authenticates perfectly and is quietly authorised for nothing.</p>
+
+  <p>So the token that came out of a real login was fed back into <code>/auth/check</code>, and the answer was <code>X-Groups: catalog:read,catalog:write</code>. That single header is the end of the chain: it is what <code>nginx</code> copies onto the forwarded request and what <code>catalog</code> reads instead of ever parsing a token. Getting it back means the role in the directory, the claim name in the Action, the prefix in the config and the vocabulary in the policy layer all agree — which is six pieces of configuration in three different systems, confirmed by one line of output.</p>
+
+  <ul class="conseq">
+    <li>
+      <span class="k">Silent</span>
+      <span class="v">An Action that writes the claim to the <em>access token</em> only. <code>gate</code> reads the <code>id_token</code> and makes no userinfo call, so the claim is simply absent — the login succeeds, the token mints, and <code>groups</code> is <code>[]</code>.</span>
+    </li>
+    <li>
+      <span class="k">Silent</span>
+      <span class="v">A <code>GROUPS_CLAIM</code> that does not match the Action's string byte for byte. Same outcome, same absence of any error, and the claim name cannot be plain <code>groups</code> — Auth0 restricts that spelling, so it is always a namespaced URI that has to agree in two places.</span>
+    </li>
+    <li>
+      <span class="k">Silent</span>
+      <span class="v">Editing <code>.env</code> under a running server. Config is read once at import, so the old value stays live and the symptom is indistinguishable from an Action that never fired.</span>
+    </li>
+  </ul>
+
+  <p class="after-table">All three end at an empty group list and a <code>200</code>. None of them can be caught by a test that supplies its own claims, and none of them is visible without walking the whole chain against a real tenant — which is what the run above was for.</p>
+
+  <h2><span class="num">04</span>Where the token goes</h2>
+  <p class="dek">Every request after login — and Auth0 is not in it.</p>
+
+  <p>This is the loop that runs on <em>every single request</em>, and it is worth noticing what is missing from it. There is no call to Auth0, no JWKS fetch, no network hop outside the cluster. <code>gate</code> verifies a signature it made itself, with a key it already holds, and answers in microseconds.</p>
+
+  <figure class="wide">
+    <div class="scroll">
+      <svg viewBox="0 0 880 300" role="img" aria-label="Diagram of the per-request check. The client sends its gate token as a bearer credential to nginx, which asks gate's /auth/check endpoint to authorise it. Gate answers 200 with identity headers, and nginx forwards the original request to catalog carrying those headers. Auth0 is shown as a dashed empty box, never contacted.">
+        <defs>
+          <marker id="f2-h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <polygon class="head" points="0,1 10,5 0,9"></polygon>
+          </marker>
+          <marker id="f2-hb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <polygon class="head-b" points="0,1 10,5 0,9"></polygon>
+          </marker>
+        </defs>
+
+        <rect class="lane-box" x="40"  y="44" width="140" height="60"></rect>
+        <text class="lane-name" x="110" y="70" text-anchor="middle">client</text>
+        <text class="lane-sub"  x="110" y="86" text-anchor="middle">HOLDS THE TOKEN</text>
+
+        <rect class="lane-box" x="280" y="44" width="140" height="60"></rect>
+        <text class="lane-name" x="350" y="70" text-anchor="middle">nginx</text>
+        <text class="lane-sub"  x="350" y="86" text-anchor="middle">§4 · NOT BUILT</text>
+
+        <rect class="lane-box" x="700" y="44" width="160" height="60"></rect>
+        <text class="lane-name" x="780" y="70" text-anchor="middle">catalog</text>
+        <text class="lane-sub"  x="780" y="86" text-anchor="middle">SEES NO TOKEN</text>
+
+        <rect class="note-b" x="275" y="210" width="150" height="60"></rect>
+        <text class="lane-name" x="350" y="236" text-anchor="middle">gate</text>
+        <text class="lane-sub"  x="350" y="252" text-anchor="middle">/AUTH/CHECK</text>
+
+        <rect class="absent" x="640" y="210" width="220" height="60"></rect>
+        <text class="absent-txt" x="750" y="236" text-anchor="middle">Auth0</text>
+        <text class="absent-txt" x="750" y="253" text-anchor="middle">never contacted</text>
+
+        <line class="flow-b" x1="180" y1="74" x2="280" y2="74" marker-end="url(#f2-hb)"></line>
+        <text class="lbl-b" x="230" y="34" text-anchor="middle">Bearer &lt;gate token&gt;</text>
+
+        <line class="flow-b" x1="330" y1="104" x2="330" y2="210" marker-end="url(#f2-hb)"></line>
+        <text class="lbl-sm" x="320" y="147" text-anchor="end">auth_request</text>
+        <text class="lbl-sm" x="320" y="161" text-anchor="end">decode() · verify</text>
+
+        <line class="flow" x1="378" y1="210" x2="378" y2="104" marker-end="url(#f2-h)"></line>
+        <text class="lbl-sm" x="390" y="154" text-anchor="start">200 · X-User-* headers</text>
+
+        <line class="flow" x1="420" y1="74" x2="700" y2="74" marker-end="url(#f2-h)"></line>
+        <text class="lbl-sm" x="560" y="34" text-anchor="middle">forwarded + identity headers</text>
+      </svg>
+    </div>
+    <figcaption><b>Identity changes form twice.</b> An Auth0 <code>id_token</code> becomes a gate token, and a gate token becomes three plain headers. Each form is narrower than the last, and <code>catalog</code> — at the end of the chain — never parses a token at all.</figcaption>
+  </figure>
+
+  <h2><span class="num">05</span>Two producers, one consumer</h2>
+  <p class="dek">Why the CLI path is not a shortcut, a stub, or scaffolding to delete.</p>
+
+  <p><code>gate token mint -s ada</code> produces a token that is byte-for-byte the same <em>kind</em> of thing the callback will produce: same key, same algorithm, same claim set. Nothing downstream can tell them apart, and nothing downstream should be able to. That is the whole reason <code>gate</code> issues its own token rather than passing Auth0's through.</p>
+
+  <figure class="wide">
+    <div class="scroll">
+      <svg viewBox="0 0 880 210" role="img" aria-label="Diagram showing two producers of the gate token — the auth callback after an Auth0 login, and the command line mint command with no Auth0 involved — both feeding one identical token that is verified by a single consumer, the check endpoint.">
+        <defs>
+          <marker id="f3-hb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <polygon class="head-b" points="0,1 10,5 0,9"></polygon>
+          </marker>
+        </defs>
+
+        <rect class="lane-box" x="24" y="26" width="226" height="54"></rect>
+        <text class="lane-name" x="137" y="49" text-anchor="middle">/auth/callback</text>
+        <text class="lane-sub"  x="137" y="65" text-anchor="middle">AFTER AN AUTH0 LOGIN</text>
+
+        <rect class="lane-box" x="24" y="120" width="226" height="54"></rect>
+        <text class="lane-name" x="137" y="143" text-anchor="middle">gate token mint</text>
+        <text class="lane-sub"  x="137" y="159" text-anchor="middle">CLI · NO AUTH0 AT ALL</text>
+
+        <rect class="note-b" x="360" y="26" width="260" height="148"></rect>
+        <text class="lane-name" x="490" y="90" text-anchor="middle">gate token</text>
+        <text class="lane-sub"  x="490" y="108" text-anchor="middle">HS256 · JWT_SECRET</text>
+        <text class="lane-sub"  x="490" y="124" text-anchor="middle">SUB · NAME · EMAIL · GROUPS</text>
+
+        <rect class="lane-box" x="700" y="72" width="166" height="56"></rect>
+        <text class="lane-name" x="783" y="96" text-anchor="middle">/auth/check</text>
+        <text class="lane-sub"  x="783" y="112" text-anchor="middle">DECODE()</text>
+
+        <line class="flow-b" x1="250" y1="53" x2="360" y2="53" marker-end="url(#f3-hb)"></line>
+        <text class="lbl-sm" x="305" y="45" text-anchor="middle">mint()</text>
+
+        <line class="flow-b" x1="250" y1="147" x2="360" y2="147" marker-end="url(#f3-hb)"></line>
+        <text class="lbl-sm" x="305" y="139" text-anchor="middle">mint()</text>
+
+        <line class="flow-b" x1="620" y1="100" x2="700" y2="100" marker-end="url(#f3-hb)"></line>
+        <text class="lbl-sm" x="660" y="92" text-anchor="middle">Bearer</text>
+      </svg>
+    </div>
+    <figcaption><b>One consumer, and it only knows one key.</b> The CLI is the non-human route — service accounts, tests, a <code>curl</code> one-liner — and the only way to get a credential with no browser in the room. It outlives the callback rather than being replaced by it.</figcaption>
+  </figure>
+
+  <hr class="rule">
+
+  <h2><span class="num">06</span>What the separation costs and buys</h2>
+  <p class="dek">Four things that follow directly from the two tokens never touching.</p>
+
+  <ul class="conseq">
+    <li>
+      <span class="k">Buys</span>
+      <span class="v">Swapping Auth0 for Okta, or for anything else, changes <code>/auth/callback</code> and nothing beyond it. No downstream service has ever seen a provider token, so none can depend on its shape.</span>
+    </li>
+    <li>
+      <span class="k">Costs</span>
+      <span class="v">Auth0 has no idea gate's tokens exist. Delete a user or force a logout there and an already-issued gate token stays valid until <code>exp</code>. That gap is exactly what §3's revocation set in Redis is for.</span>
+    </li>
+    <li>
+      <span class="k">Costs</span>
+      <span class="v"><code>JWT_SECRET</code> is the entire root of trust — anyone holding it can mint any identity with any groups. Every replica must share it, and two replicas with different keys produce intermittent 401s that look like anything but a config problem.</span>
+    </li>
+    <li>
+      <span class="k">Watch</span>
+      <span class="v">Whether the <code>id_token</code> gets verified against Auth0's JWKS is still open — but wherever it lands, that check belongs <em>in the callback</em>. <code>decode()</code> should keep meaning one thing: is this a token gate itself signed.</span>
+    </li>
+  </ul>
+
+  <p class="statusnote"><b>Current state.</b> The whole of figure 1 runs today against a real tenant, groups included — a login ends with a token gate signed, carrying <code>catalog:read</code> and <code>catalog:write</code>, and <code>/auth/check</code> answers 200 with both in <code>X-Groups</code>. What the callback still does not do is <em>put the caller anywhere</em>: it answers with the token as JSON rather than setting a session cookie and redirecting to the <code>rd</code> that came back on <code>state</code>. That ending is the next piece of work, and until it lands the browser leg stops one step short of the page the person actually asked for.</p>
+
+</div>
