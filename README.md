@@ -1,73 +1,101 @@
-# orbit
+# Orbit
 
-A working model of a forward-authentication security proxy, built to learn the
-disciplines rather than to ship a product.
+**A two-service Python backend exploring authentication boundaries, persistence, and cloud-native delivery.**
 
-Two services sit behind nginx:
+Orbit is a hands-on backend engineering project built around a deliberate architectural constraint: **the business API does not implement authentication**. Instead, Nginx delegates authentication checks to a dedicated service before forwarding requests to the API. The project also includes PostgreSQL persistence, a Python API client, automated tests, containerized local development, and Kubernetes deployment templates.
 
-- **`gate`** — an authentication service. It is not in the request path. nginx
-  holds each incoming request and asks `gate` whether the caller is allowed
-  through, then forwards the original request with identity headers attached.
-- **`catalog`** — an ordinary business service, deliberately trivial. It serves a
-  list of items and contains no security code at all.
+> **Portfolio project, not a hosted production service.** You can run the local stack without cloud credentials. Real interactive login requires configuring your own identity provider.
 
-Around them: a Python client, PostgreSQL persistence, Docker images, CI workflows,
-and Helm charts for Kubernetes deployment.
+## Architecture
 
-## Quickstart
-
-```bash
-make install     # one virtualenv at .venv, both services editable
-make help        # available commands, discovered services, missing tools
-make test        # both suites; requires local PostgreSQL (see below)
+```mermaid
+flowchart LR
+    C[Browser / API client] --> N[Nginx :8080]
+    N -->|auth_request /auth/check| G[Gate :5001]
+    N -->|authorized request + identity headers| A[Catalog :5000]
+    A --> P[(PostgreSQL)]
+    G <-->|OAuth / OIDC login and token exchange| I[Identity provider]
+    M[Alembic migration job] --> P
 ```
 
-Or bring up the whole stack — nginx on `:8080`, and nothing else reachable:
+**Request flow:** Nginx exposes the only host-facing application port. For protected routes, it performs an internal subrequest to Gate. If authorized, Nginx forwards the original request to Catalog with identity headers; otherwise it returns `401` to API callers or redirects browser requests toward login. Catalog remains private on the Compose network. Public health/info routes are explicitly exempted.
+
+## What this project demonstrates
+
+| Area | Implementation |
+| --- | --- |
+| Backend APIs | FastAPI services with distinct authentication and business responsibilities |
+| Authentication | OAuth/OIDC provider integration, Gate-issued signed tokens, Nginx `auth_request` |
+| Data persistence | PostgreSQL, SQLAlchemy repository layer, Alembic migrations |
+| Service boundaries | Catalog does not validate tokens; access control is enforced at the proxy/network boundary |
+| Local infrastructure | Docker Compose with private service networking, health checks, and migration-before-start dependency |
+| Testing | Gate authentication tests, Catalog API/database tests, Helm configuration and migration-failure tests |
+| Delivery | Separate service Dockerfiles, GitHub Actions CI/release workflows, Helm chart and EKS configuration |
+
+## Run locally
+
+**Requirements:** Docker with Compose. To run Python tests locally, also install Python/Poetry and use the project's Makefile.
 
 ```bash
 COMMIT=$(git rev-parse --short HEAD) docker compose up -d --build
+```
 
-curl -i localhost:8080/items         # 401 -- nginx asked gate, gate said no
-curl -i localhost:8080/health/ready  # 200 -- catalog's, and public on purpose
-curl -i localhost:5000/items         # connection refused, which is the point
+Try the endpoints:
 
+```bash
+curl -i http://localhost:8080/items
+curl -i http://localhost:8080/health/ready
+curl -i http://localhost:5000/items
+```
+
+Expected results: `/items` returns **401** without credentials; `/health/ready` is public and should return **200** when healthy; direct access to Catalog on host port 5000 should fail because that port is not published. The stack starts with a placeholder identity provider, so an interactive login will not work until configured.
+
+Stop the stack:
+
+```bash
 docker compose down
 ```
 
-A real login needs a provider: copy `apps/gate/.env.example` to `apps/gate/.env`.
-The `.env` file holds the tenant values and is
-gitignored, so a fresh clone comes up with a placeholder and a login that goes
-nowhere. Configure the provider URL, client ID, client secret, and group claim
-in that file to connect your own identity provider. Gate
-[configuration defaults](apps/gate/gate/config.py) list the supported settings.
+To configure a real provider, copy `apps/gate/.env.example` to `apps/gate/.env` and supply your own provider URL, client ID, client secret and claim settings. **Never commit `.env` or real credentials.** See [Gate settings](apps/gate/gate/config.py).
 
-## Documentation
+## Tests
 
-- [Token flow](docs/token-flow.html) — a visual explanation of provider tokens,
-  Gate session tokens, and the authentication flow. Open the HTML file in a browser.
-- [Helm configuration](deploy/helm/orbit/values.yaml) — chart defaults; layer the
-  development or production values file and replace its placeholders to deploy.
+The repository includes separate test suites for Gate and Catalog. Catalog database tests require a disposable PostgreSQL instance and use an `orbit_test` database. The existing [test setup instructions](#test-setup) below use a local Docker database; never point these fixtures at valuable data.
 
-## Running tests
-
-Catalog tests require PostgreSQL and use a separate `orbit_test` database.
-Start an isolated test server, then run both suites:
+### Test setup
 
 ```bash
-docker run -d --name orbit-test-postgres \
-  -e POSTGRES_PASSWORD=orbit-dev \
-  -p 127.0.0.1:55432:5432 postgres:18
-# Wait until this reports "accepting connections":
-docker exec orbit-test-postgres pg_isready -U postgres
+docker run -d --name orbit-test-postgres -e POSTGRES_PASSWORD=orbit-dev -p 127.0.0.1:55432:5432 postgres:18
+```
+
+Once `docker exec orbit-test-postgres pg_isready -U postgres` reports readiness:
+
+```bash
+make install
 DB_HOST=127.0.0.1 DB_PORT=55432 make test
+```
+
+Cleanup:
+
+```bash
 docker rm -f orbit-test-postgres
 ```
 
-The test fixtures reset tables in the test database; use a disposable database.
-Gate tests mock the identity provider and require no provider credentials.
+Gate tests mock the identity provider. Helm-focused tests live under `deploy/helm/tests`.
 
-With Helm installed, check chart rendering and migration error handling:
+## Explore the code
 
-```bash
-.venv/bin/python -m unittest discover -s deploy/helm/tests -v
-```
+- [Gate authentication routes](apps/gate/gate/auth/router.py) and [token utilities](apps/gate/gate/auth/utils.py)
+- [Catalog item API](apps/catalog/catalog/server/items/router.py), [repository](apps/catalog/catalog/db/repository.py) and [database layer](apps/catalog/catalog/db/database.py)
+- [Nginx forward-auth configuration](deploy/nginx/orbit.conf)
+- [Docker Compose stack](docker-compose.yml) and [Alembic migration](apps/catalog/alembic/versions/29e2adff3aba_create_items_table.py)
+- [Helm templates](deploy/helm/orbit/templates/) and [GitHub Actions workflows](.github/workflows/)
+- [Token flow illustration](docs/token-flow.html)
+
+## Engineering decisions and trade-offs
+
+For the reasoning behind the service split, the trust boundary, token design, migration ordering and deployment approach, read the **[engineering case study](PORTFOLIO.md)**.
+
+## Scope
+
+Orbit is a learning and portfolio system, not a claim of production hardening or measured high-scale performance. In particular, its security model assumes Catalog cannot be reached except through the trusted proxy, and deployment-specific secrets must be supplied externally. See the case study for limitations and potential improvements.
